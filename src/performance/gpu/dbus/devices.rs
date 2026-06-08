@@ -1,109 +1,121 @@
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
-
 use crate::performance::gpu::{
-    amd, intel,
-    interface::{GPUDevice, GPUResult},
-    tdp::{TDPDevice, TDPResult},
+    gpu_device::{amd, intel, GPUDevice, GPUResult},
+    monitor,
+    profile::{self, ProfileDevice, ProfileResult},
+    tdp::{self, TDPDevice, TDPResult},
 };
+use tokio::sync::Mutex;
 
 #[allow(clippy::large_enum_variant)]
 pub enum TDPDevices {
-    Amd(amd::tdp::Tdp),
-    Intel(intel::tdp::Tdp),
+    Hwmon(tdp::hwmon::HwmonTdp),
+    IntelRapl(tdp::intelrapl::IntelRaplTdp),
+    RyzenAdj(tdp::ryzenadj::RyzenAdjTdp),
 }
 
 impl TDPDevices {
     pub async fn tdp(&self) -> TDPResult<f64> {
         match self {
-            Self::Amd(dev) => dev.tdp().await,
-            Self::Intel(dev) => dev.tdp().await,
+            Self::Hwmon(dev) => dev.tdp().await,
+            Self::IntelRapl(dev) => dev.tdp().await,
+            Self::RyzenAdj(dev) => dev.tdp().await,
         }
     }
 
     pub async fn min_tdp(&self) -> TDPResult<f64> {
         match self {
-            Self::Amd(dev) => dev.min_tdp().await,
-            Self::Intel(dev) => dev.min_tdp().await,
+            Self::Hwmon(dev) => dev.min_tdp().await,
+            Self::IntelRapl(dev) => dev.min_tdp().await,
+            Self::RyzenAdj(dev) => dev.min_tdp().await,
         }
     }
 
     pub async fn max_tdp(&self) -> TDPResult<f64> {
         match self {
-            Self::Amd(dev) => dev.max_tdp().await,
-            Self::Intel(dev) => dev.max_tdp().await,
+            Self::Hwmon(dev) => dev.max_tdp().await,
+            Self::IntelRapl(dev) => dev.max_tdp().await,
+            Self::RyzenAdj(dev) => dev.max_tdp().await,
         }
     }
 
     pub async fn set_tdp(&mut self, value: f64) -> TDPResult<()> {
         match self {
-            Self::Amd(dev) => dev.set_tdp(value).await,
-            Self::Intel(dev) => dev.set_tdp(value).await,
+            Self::Hwmon(dev) => dev.set_tdp(value).await,
+            Self::IntelRapl(dev) => dev.set_tdp(value).await,
+            Self::RyzenAdj(dev) => dev.set_tdp(value).await,
         }
     }
 
     pub async fn boost(&self) -> TDPResult<f64> {
         match self {
-            Self::Amd(dev) => dev.boost().await,
-            Self::Intel(dev) => dev.boost().await,
+            Self::Hwmon(dev) => dev.boost().await,
+            Self::IntelRapl(dev) => dev.boost().await,
+            Self::RyzenAdj(dev) => dev.boost().await,
         }
     }
 
     pub async fn max_boost(&self) -> TDPResult<f64> {
         match self {
-            Self::Amd(dev) => dev.max_boost().await,
-            Self::Intel(dev) => dev.max_boost().await,
+            Self::Hwmon(dev) => dev.max_boost().await,
+            Self::IntelRapl(dev) => dev.max_boost().await,
+            Self::RyzenAdj(dev) => dev.max_boost().await,
         }
     }
 
     pub async fn set_boost(&mut self, value: f64) -> TDPResult<()> {
         match self {
-            Self::Amd(dev) => dev.set_boost(value).await,
-            Self::Intel(dev) => dev.set_boost(value).await,
+            Self::Hwmon(dev) => dev.set_boost(value).await,
+            Self::IntelRapl(dev) => dev.set_boost(value).await,
+            Self::RyzenAdj(dev) => dev.set_boost(value).await,
         }
     }
 
     pub async fn thermal_throttle_limit_c(&self) -> TDPResult<f64> {
         match self {
-            Self::Amd(dev) => dev.thermal_throttle_limit_c().await,
-            Self::Intel(dev) => dev.thermal_throttle_limit_c().await,
+            Self::Hwmon(dev) => dev.thermal_throttle_limit_c().await,
+            Self::IntelRapl(dev) => dev.thermal_throttle_limit_c().await,
+            Self::RyzenAdj(dev) => dev.thermal_throttle_limit_c().await,
         }
     }
 
     pub async fn set_thermal_throttle_limit_c(&mut self, limit: f64) -> TDPResult<()> {
         match self {
-            Self::Amd(dev) => dev.set_thermal_throttle_limit_c(limit).await,
-            Self::Intel(dev) => dev.set_thermal_throttle_limit_c(limit).await,
+            Self::Hwmon(dev) => dev.set_thermal_throttle_limit_c(limit).await,
+            Self::IntelRapl(dev) => dev.set_thermal_throttle_limit_c(limit).await,
+            Self::RyzenAdj(dev) => dev.set_thermal_throttle_limit_c(limit).await,
+        }
+    }
+}
+
+pub enum ProfileDevices {
+    RyzenAdj(profile::ryzenadj::RyzenAdjProfile),
+}
+
+impl ProfileDevices {
+    pub async fn power_profile(&self) -> ProfileResult<String> {
+        match self {
+            Self::RyzenAdj(dev) => dev.power_profile().await,
         }
     }
 
-    //TODO: Deprecate the power_profile functions and set them automatically with TDP.
-    pub async fn power_profile(&self) -> TDPResult<String> {
+    pub async fn set_power_profile(&mut self, profile: String) -> ProfileResult<()> {
         match self {
-            Self::Amd(dev) => dev.power_profile().await,
-            Self::Intel(dev) => dev.power_profile().await,
+            Self::RyzenAdj(dev) => dev.set_power_profile(profile).await,
         }
     }
 
-    pub async fn set_power_profile(&mut self, profile: String) -> TDPResult<()> {
+    pub async fn power_profiles_available(&self) -> ProfileResult<Vec<String>> {
         match self {
-            Self::Amd(dev) => dev.set_power_profile(profile).await,
-            Self::Intel(dev) => dev.set_power_profile(profile).await,
-        }
-    }
-
-    pub async fn power_profiles_available(&self) -> TDPResult<Vec<String>> {
-        match self {
-            Self::Amd(dev) => dev.power_profiles_available().await,
-            Self::Intel(dev) => dev.power_profiles_available().await,
+            Self::RyzenAdj(dev) => dev.power_profiles_available().await,
         }
     }
 }
 
 pub enum GPUDevices {
-    AmdGpu(amd::amdgpu::AmdGpu),
-    IntelGpu(intel::intelgpu::IntelGPU),
+    AmdGpu(amd::AmdGpu),
+    IntelGpu(intel::IntelGPU),
 }
 
 impl GPUDevices {
@@ -268,3 +280,9 @@ impl GPUDevices {
         }
     }
 }
+
+enum MonitorDevices {
+    Intel(monitor::intel::IntelMonitorGPU),
+}
+
+impl MonitorDevices {}

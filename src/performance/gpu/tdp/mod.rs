@@ -1,4 +1,11 @@
+pub mod firmware_attributes;
+pub mod hwmon;
+pub mod intelrapl;
+pub mod ryzenadj;
+
 use std::io;
+
+use crate::performance::gpu::database::tdp_limits::TdpLimits;
 
 #[derive(Debug)]
 pub enum TDPError {
@@ -24,7 +31,7 @@ pub type TDPResult<T> = Result<T, TDPError>;
 
 // Helper trait to simplify access to hardware information
 pub trait HardwareAccess {
-    fn hardware(&self) -> Option<&crate::performance::gpu::platform::hardware::Hardware>;
+    fn hardware(&self) -> Option<&TdpLimits>;
 }
 
 pub trait TDPDevice: Sync + Send + HardwareAccess {
@@ -34,9 +41,6 @@ pub trait TDPDevice: Sync + Send + HardwareAccess {
     async fn set_boost(&mut self, value: f64) -> TDPResult<()>;
     async fn thermal_throttle_limit_c(&self) -> TDPResult<f64>;
     async fn set_thermal_throttle_limit_c(&mut self, limit: f64) -> TDPResult<()>;
-    async fn power_profile(&self) -> TDPResult<String>;
-    async fn power_profiles_available(&self) -> TDPResult<Vec<String>>;
-    async fn set_power_profile(&mut self, profile: String) -> TDPResult<()>;
 
     // Default implementations for hardware-based methods
     async fn min_tdp(&self) -> TDPResult<f64> {

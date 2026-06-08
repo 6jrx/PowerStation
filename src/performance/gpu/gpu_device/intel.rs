@@ -6,14 +6,12 @@ use std::{
 
 use tokio::sync::Mutex;
 
+use crate::constants::GPU_PATH;
 use crate::performance::gpu::{
     dbus::devices::TDPDevices,
-    intel::monitor::IntelMonitorClient,
-    interface::{GPUDevice, GPUError, GPUResult},
+    gpu_device::{GPUDevice, GPUError, GPUResult},
+    monitor::intel::MonitorCommand,
 };
-use crate::{constants::PREFIX, performance::gpu::intel::monitor::MonitorCommand};
-
-use super::tdp::Tdp;
 
 #[derive(Debug, Clone)]
 pub struct IntelGPU {
@@ -36,15 +34,16 @@ pub struct IntelGPU {
 
 impl GPUDevice for IntelGPU {
     async fn get_gpu_path(&self) -> String {
-        format!("{0}/GPU/{1}", PREFIX, self.name().await)
+        format!("{0}/{1}", GPU_PATH, self.name().await)
     }
 
     /// Returns the TDP DBus interface for this GPU
     async fn get_tdp_interface(&self) -> Option<Arc<Mutex<TDPDevices>>> {
         match self.class.as_str() {
-            "integrated" => Some(Arc::new(Mutex::new(TDPDevices::Intel(Tdp::new(
-                self.path.clone(),
-            ))))),
+            //TODO
+            //"integrated" => Some(Arc::new(Mutex::new(TDPDevices::Intel(Tdp::new(
+            //    self.path.clone(),
+            //))))),
             _ => None,
         }
     }
@@ -191,8 +190,8 @@ impl GPUDevice for IntelGPU {
         Ok(())
     }
 
-    async fn get_gpu_busy_percent(&self) -> GPUResult<u8> {
-        let busy_percent = self.monitor.get_busy_percentage().await;
-        Ok(busy_percent.round() as u8)
-    }
+    //async fn get_gpu_busy_percent(&self) -> GPUResult<u8> {
+    //    let busy_percent = self.monitor.get_busy_percentage().await;
+    //    Ok(busy_percent.round() as u8)
+    //}
 }

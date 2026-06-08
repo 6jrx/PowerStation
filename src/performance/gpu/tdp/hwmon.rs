@@ -1,9 +1,9 @@
-use std::{collections::HashMap, fs, io, ops::Add, path::PathBuf, str::FromStr};
+pub(crate) use std::{collections::HashMap, fs, io, ops::Add, path::PathBuf, str::FromStr};
 
 use udev::Device;
 
 use crate::performance::gpu::{
-    platform::hardware::Hardware,
+    database::tdp_limits::TdpLimits,
     tdp::{HardwareAccess, TDPDevice, TDPError, TDPResult},
 };
 
@@ -11,9 +11,9 @@ use crate::performance::gpu::{
 const TDP_SCALE: f64 = 1000000.0;
 
 /// Hwmon implementation of TDP control
-pub struct Hwmon {
+pub struct HwmonTdp {
     /// Detected hardware TDP limits
-    hardware: Option<Hardware>,
+    hardware: Option<TdpLimits>,
     /// Udev device used to set/get sysfs properties
     device: Device,
     /// Mapping of attribute labels to their attribute path. In the hwmon
@@ -26,7 +26,7 @@ pub struct Hwmon {
     label_map: HashMap<String, String>,
 }
 
-impl Hwmon {
+impl HwmonTdp {
     pub fn new(path: &str) -> Result<Self, io::Error> {
         // Discover the hwmon path for the device
         let mut hwmon_path = None;
@@ -86,7 +86,7 @@ impl Hwmon {
     }
 
     /// Returns the detected TDP limits
-    fn get_limits(device: &Device, label_map: &HashMap<String, String>) -> Option<Hardware> {
+    fn get_limits(device: &Device, label_map: &HashMap<String, String>) -> Option<TdpLimits> {
         let prefix = label_map.get("fastPPT")?;
 
         let cap_max = format!("{prefix}_cap_max");
@@ -95,8 +95,11 @@ impl Hwmon {
         let cap_min = format!("{prefix}_cap_min");
         let min_value = device.attribute_value(cap_min)?.to_str()?;
         let min_value: f64 = min_value.parse().ok()?;
+        let dev_node = format!("dev_node");
+        let model_name = device.attribute_value(dev_node)?.to_str()?.to_string();
 
-        let hardware = Hardware {
+        let hardware = TdpLimits {
+            model_name,
             min_tdp: (min_value / TDP_SCALE),
             max_tdp: (max_value / TDP_SCALE),
             max_boost: 0.0,
@@ -165,13 +168,13 @@ impl Hwmon {
     }
 }
 
-impl HardwareAccess for Hwmon {
-    fn hardware(&self) -> Option<&Hardware> {
+impl HardwareAccess for HwmonTdp {
+    fn hardware(&self) -> Option<&TdpLimits> {
         self.hardware.as_ref()
     }
 }
 
-impl TDPDevice for Hwmon {
+impl TDPDevice for HwmonTdp {
     async fn tdp(&self) -> TDPResult<f64> {
         let Some(value) = self.get_slow_ppt_cap::<f64>() else {
             return Err(TDPError::FeatureUnsupported);
@@ -192,7 +195,7 @@ impl TDPDevice for Hwmon {
 
         // Get the current boost value before updating. We will
         // use this value to also adjust the Fast PPT Limit.
-        let boost = self.boost().await? as u64;
+        let boost = self.boost().await?.round() as u64;
         let slow_ppt = (value * TDP_SCALE) as u64; // 15 == 15000000
         let fast_ppt = (value * TDP_SCALE) as u64 + boost;
 
@@ -243,18 +246,6 @@ impl TDPDevice for Hwmon {
     }
 
     async fn set_thermal_throttle_limit_c(&mut self, _limit: f64) -> TDPResult<()> {
-        Err(TDPError::FeatureUnsupported)
-    }
-
-    async fn power_profile(&self) -> TDPResult<String> {
-        Err(TDPError::FeatureUnsupported)
-    }
-
-    async fn power_profiles_available(&self) -> TDPResult<Vec<String>> {
-        Err(TDPError::FeatureUnsupported)
-    }
-
-    async fn set_power_profile(&mut self, _profile: String) -> TDPResult<()> {
         Err(TDPError::FeatureUnsupported)
     }
 }

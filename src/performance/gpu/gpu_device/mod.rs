@@ -1,3 +1,6 @@
+pub mod amd;
+pub mod intel;
+
 use std::{path::PathBuf, sync::Arc};
 
 use tokio::fs;

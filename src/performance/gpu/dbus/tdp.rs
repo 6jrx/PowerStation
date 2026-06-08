@@ -113,27 +113,27 @@ impl GPUTDPDBusIface {
         }
     }
 
-    #[zbus(property)]
-    async fn power_profile(&self) -> fdo::Result<String> {
-        match self.dev.lock().await.power_profile().await {
-            TDPResult::Ok(result) => Ok(result),
-            TDPResult::Err(err) => Err(err.into()),
-        }
-    }
+    //#[zbus(property)]
+    //async fn power_profile(&self) -> fdo::Result<String> {
+    //    match self.dev.lock().await.power_profile().await {
+    //        TDPResult::Ok(result) => Ok(result),
+    //        TDPResult::Err(err) => Err(err.into()),
+    //    }
+    //}
 
-    #[zbus(property)]
-    async fn set_power_profile(&mut self, profile: String) -> fdo::Result<()> {
-        match self.dev.lock().await.set_power_profile(profile).await {
-            TDPResult::Ok(result) => Ok(result),
-            TDPResult::Err(err) => Err(err.into()),
-        }
-    }
+    //#[zbus(property)]
+    //async fn set_power_profile(&mut self, profile: String) -> fdo::Result<()> {
+    //    match self.dev.lock().await.set_power_profile(profile).await {
+    //        TDPResult::Ok(result) => Ok(result),
+    //        TDPResult::Err(err) => Err(err.into()),
+    //    }
+    //}
 
-    #[zbus(property)]
-    async fn power_profiles_available(&self) -> fdo::Result<Vec<String>> {
-        match self.dev.lock().await.power_profiles_available().await {
-            TDPResult::Ok(result) => Ok(result),
-            TDPResult::Err(err) => Err(err.into()),
-        }
-    }
+    //#[zbus(property)]
+    //async fn power_profiles_available(&self) -> fdo::Result<Vec<String>> {
+    //    match self.dev.lock().await.power_profiles_available().await {
+    //        TDPResult::Ok(result) => Ok(result),
+    //        TDPResult::Err(err) => Err(err.into()),
+    //    }
+    //}
 }

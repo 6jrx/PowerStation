@@ -8,13 +8,14 @@ use zbus_macros::interface;
 
 use tokio::sync::Mutex;
 
-use crate::performance::gpu::amd::amdgpu::AmdGpu;
-use crate::performance::gpu::connector::Connector;
-use crate::performance::gpu::dbus::devices::GPUDevices;
-use crate::performance::gpu::dbus::tdp::GPUTDPDBusIface;
-use crate::performance::gpu::intel::intelgpu::IntelGPU;
-use crate::performance::gpu::intel::monitor::{IntelMonitorGPU, MonitorStrategy};
-use crate::performance::gpu::interface::GPUError;
+use crate::performance::gpu::gpu_device::amd::AmdGpu;
+use crate::performance::gpu::gpu_device::intel::IntelGPU;
+use crate::performance::gpu::{
+    connector::Connector,
+    dbus::{devices::GPUDevices, tdp::GPUTDPDBusIface},
+    gpu_device::GPUError,
+    monitor::intel::{IntelMonitorGPU, MonitorStrategy},
+};
 
 const DRM_PATH: &str = "/sys/class/drm";
 const PCI_IDS_PATH: &str = "/usr/share/hwdata/pci.ids";
@@ -430,6 +431,7 @@ pub async fn get_gpu(path: String) -> Result<GPUDBusInterface, std::io::Error> {
                 subvendor_id,
                 revision_id,
                 manual_clock: true,
+                //TODO:: Implent monitor interface
                 monitor: IntelMonitorGPU::new(PathBuf::from(&path), MonitorStrategy::default())
                     .run(),
             })),

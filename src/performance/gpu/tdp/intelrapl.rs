@@ -1,28 +1,29 @@
+use core::option::Option::{None, Some};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 
 use crate::performance::gpu::{
-    platform::hardware::Hardware,
+    database::tdp_limits::TdpLimits,
     tdp::{HardwareAccess, TDPDevice, TDPError, TDPResult},
 };
 
 /// Implementation of TDP control for Intel GPUs
-pub struct Tdp {
+pub struct IntelRaplTdp {
     //pub path: String,
-    hardware: Option<Hardware>,
+    hardware: Option<TdpLimits>,
     base_path: Option<PathBuf>,
 }
 
-impl HardwareAccess for Tdp {
-    fn hardware(&self) -> Option<&Hardware> {
+impl HardwareAccess for IntelRaplTdp {
+    fn hardware(&self) -> Option<&TdpLimits> {
         self.hardware.as_ref()
     }
 }
 
-impl Tdp {
-    pub fn new(_path: String) -> Tdp {
-        let hardware = match Hardware::new() {
+impl IntelRaplTdp {
+    pub fn new(_path: String) -> IntelRaplTdp {
+        let hardware = match TdpLimits::new() {
             Some(hardware) => {
                 log::info!("Found Hardware interface for TDP control");
                 Some(hardware)
@@ -60,14 +61,14 @@ impl Tdp {
             }
         }
 
-        Tdp {
+        IntelRaplTdp {
             hardware,
             base_path,
         }
     }
 }
 
-impl TDPDevice for Tdp {
+impl TDPDevice for IntelRaplTdp {
     async fn tdp(&self) -> TDPResult<f64> {
         let Some(base_path) = self.base_path.as_ref() else {
             return Err(TDPError::FeatureUnsupported);
@@ -180,21 +181,6 @@ impl TDPDevice for Tdp {
 
     async fn set_thermal_throttle_limit_c(&mut self, _limit: f64) -> TDPResult<()> {
         log::error!("Thermal throttling not supported on intel gpu");
-        Err(TDPError::FeatureUnsupported)
-    }
-
-    async fn power_profile(&self) -> TDPResult<String> {
-        log::error!("Power profiles not supported on intel gpu");
-        Err(TDPError::FeatureUnsupported)
-    }
-
-    async fn set_power_profile(&mut self, _profile: String) -> TDPResult<()> {
-        log::error!("Power profiles not supported on intel gpu");
-        Err(TDPError::FeatureUnsupported)
-    }
-
-    async fn power_profiles_available(&self) -> TDPResult<Vec<String>> {
-        log::error!("Power profiles not supported on intel gpu");
         Err(TDPError::FeatureUnsupported)
     }
 }

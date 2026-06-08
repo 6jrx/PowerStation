@@ -9,10 +9,8 @@ use tokio::sync::Mutex;
 use crate::constants::GPU_PATH;
 use crate::performance::gpu::{
     dbus::devices::TDPDevices,
-    interface::{GPUDevice, GPUError, GPUResult},
+    gpu_device::{GPUDevice, GPUError, GPUResult},
 };
-
-use super::tdp::Tdp;
 
 #[derive(Debug, Clone)]
 pub struct AmdGpu {
@@ -39,9 +37,10 @@ impl GPUDevice for AmdGpu {
     /// Returns the TDP DBus interface for this GPU
     async fn get_tdp_interface(&self) -> Option<Arc<Mutex<TDPDevices>>> {
         match self.class.as_str() {
-            "integrated" => Some(Arc::new(Mutex::new(TDPDevices::Amd(
-                Tdp::new(self.path.as_str(), self.device_id.as_str()).await,
-            )))),
+            //TODO
+            //"integrated" => Some(Arc::new(Mutex::new(TDPDevices::(
+            //    Tdp::new(self.path.as_str(), self.device_id.as_str()).await,
+            //)))),
             _ => None,
         }
     }

@@ -1,18 +1,25 @@
-use crate::performance::gpu::platform::model_config::{Config, ModelConfig};
 use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-#[derive(Default, Clone)]
-pub struct Hardware {
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct Config {
+    pub models: Vec<TdpLimits>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct TdpLimits {
+    pub model_name: String,
     pub min_tdp: f64,
     pub max_tdp: f64,
     pub max_boost: f64,
 }
 
-impl Hardware {
-    pub const PLATFORM_DIR: &str = "/usr/share/powerstation/platform";
+impl TdpLimits {
+    pub const PLATFORM_DIR: &str = "/usr/share/powerstation/database";
     pub const AMD_APU_DATABASE: &str = "amd_apu_database.toml";
     pub const INTEL_APU_DATABASE: &str = "intel_apu_database.toml";
     pub const DMI_OVERRIDES_APU_DATABASE: &str = "dmi_overrides_apu_database.toml";
@@ -52,6 +59,7 @@ impl Hardware {
 
         // Create default configuration
         let mut hardware = Self {
+            model_name: "".to_string(),
             min_tdp: 0.0,
             max_tdp: 0.0,
             max_boost: 0.0,
@@ -102,7 +110,7 @@ impl Hardware {
 
     // Merge multiple Config objects
     fn merge_configs(configs: Vec<Config>) -> Config {
-        let mut merged_models: HashMap<String, ModelConfig> = HashMap::new();
+        let mut merged_models: HashMap<String, TdpLimits> = HashMap::new();
 
         // Merge in order, later models with same name will override earlier ones
         for config in configs {

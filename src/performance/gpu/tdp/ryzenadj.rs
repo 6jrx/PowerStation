@@ -1,10 +1,11 @@
 #![cfg(target_arch = "x86_64")]
+use core::option::Option::None;
 use std::error::Error;
 
 use libryzenadj::RyzenAdj;
 
 use crate::performance::gpu::{
-    platform::hardware::Hardware,
+    database::tdp_limits::TdpLimits,
     tdp::{HardwareAccess, TDPDevice, TDPError, TDPResult},
 };
 
@@ -16,17 +17,16 @@ const DEV_ID_SEPHIROTH: &str = "1435";
 pub struct RyzenAdjTdp {
     //pub path: String,
     pub device_id: String,
-    pub profile: String,
     ryzenadj: RyzenAdj,
     pub unsupported_stapm_limit: f32,
     pub unsupported_ppt_limit_fast: f32,
     pub unsupported_thm_limit: f32,
     // We need Hardware for the TDPDevice trait's default methods
-    hardware: Option<Hardware>,
+    hardware: Option<TdpLimits>,
 }
 
 impl HardwareAccess for RyzenAdjTdp {
-    fn hardware(&self) -> Option<&Hardware> {
+    fn hardware(&self) -> Option<&TdpLimits> {
         self.hardware.as_ref()
     }
 }
@@ -37,9 +37,6 @@ unsafe impl Send for RyzenAdjTdp {} // implementor (RyzenAdj) may be unsafe
 impl RyzenAdjTdp {
     /// Create a new TDP instance
     pub fn new(_path: String, device_id: String) -> Result<RyzenAdjTdp, Box<dyn Error>> {
-        // Currently there is no known way to read this value
-        let profile = String::from("power-saving");
-
         // Set fake TDP limits for GPUs that don't support ryzenadj monitoring (e.g. Steam Deck)
         let unsupported_stapm_limit: f32 = match device_id.as_str() {
             DEV_ID_VANGOGH => 12.0,
@@ -59,7 +56,7 @@ impl RyzenAdjTdp {
         let ryzenadj = RyzenAdj::new().map_err(|err| err.to_string())?;
 
         // Get hardware instance for min/max TDP values
-        let hardware = match Hardware::new() {
+        let hardware = match TdpLimits::new() {
             Some(hardware) => {
                 log::info!("Found Hardware interface for RyzenAdj TDP control");
                 Some(hardware)
@@ -68,9 +65,7 @@ impl RyzenAdjTdp {
         };
 
         Ok(RyzenAdjTdp {
-            //path,
             device_id,
-            profile,
             ryzenadj,
             unsupported_stapm_limit,
             unsupported_ppt_limit_fast,
@@ -254,24 +249,6 @@ impl RyzenAdjTdp {
             }
         }
     }
-
-    /// Set the power profile to the given profile
-    fn set_power_profile(&self, profile: String) -> Result<(), String> {
-        log::debug!("Setting power profile");
-        match profile.as_str() {
-            "power-saving" => self
-                .ryzenadj
-                .set_power_saving()
-                .map_err(|err| err.to_string()),
-            "max-performance" => self
-                .ryzenadj
-                .set_max_performance()
-                .map_err(|err| err.to_string()),
-            _ => Err(String::from(
-                "Invalid power profile. Must be in [max-performance, power-saving]",
-            )),
-        }
-    }
 }
 
 impl TDPDevice for RyzenAdjTdp {
@@ -311,10 +288,12 @@ impl TDPDevice for RyzenAdjTdp {
     }
 
     async fn boost(&self) -> TDPResult<f64> {
-        let slow_ppt_limit =
-            RyzenAdjTdp::get_ppt_limit_slow(self).map_err(TDPError::FailedOperation)? as f64;
-        let stapm_limit =
-            RyzenAdjTdp::get_stapm_limit(self).map_err(TDPError::FailedOperation)? as f64;
+        let slow_ppt_limit = RyzenAdjTdp::get_ppt_limit_slow(self)
+            .map_err(TDPError::FailedOperation)?
+            .round() as f64;
+        let stapm_limit = RyzenAdjTdp::get_stapm_limit(self)
+            .map_err(TDPError::FailedOperation)?
+            .round() as f64;
 
         // TODO: Is this a bug in ryzenadj? Sometimes it is ~0
         if slow_ppt_limit < 1.0 {
@@ -337,8 +316,9 @@ impl TDPDevice for RyzenAdjTdp {
         }
 
         // Get the STAPM Limit so we can calculate what S/FPPT limits to set.
-        let stapm_limit =
-            RyzenAdjTdp::get_stapm_limit(self).map_err(TDPError::FailedOperation)? as f64;
+        let stapm_limit = RyzenAdjTdp::get_stapm_limit(self)
+            .map_err(TDPError::FailedOperation)?
+            .round() as f64;
 
         // Set the new slow PPT limit
         let slow_ppt_limit = ((stapm_limit + value) * 1000.0) as u32;
@@ -362,24 +342,5 @@ impl TDPDevice for RyzenAdjTdp {
         let limit = limit as u32;
         RyzenAdjTdp::set_thm_limit(self, limit)
             .map_err(|err| TDPError::FailedOperation(err.to_string()))
-    }
-
-    async fn power_profile(&self) -> TDPResult<String> {
-        Ok(self.profile.clone())
-    }
-
-    async fn set_power_profile(&mut self, profile: String) -> TDPResult<()> {
-        log::debug!("Setting power profile to: {}", profile);
-        RyzenAdjTdp::set_power_profile(self, profile.clone())
-            .map_err(|err| TDPError::FailedOperation(err.to_string()))?;
-        self.profile = profile;
-        Ok(())
-    }
-
-    async fn power_profiles_available(&self) -> TDPResult<Vec<String>> {
-        Ok(vec![
-            "max-performance".to_string(),
-            "power-saving".to_string(),
-        ])
     }
 }

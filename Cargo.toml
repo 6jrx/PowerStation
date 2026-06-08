@@ -23,7 +23,6 @@ simple_logger = "5.0.0"
 tokio = { version = "1.45.1", features = ["full"] }
 zbus = { version = "5.7.1", default-features = false, features = ["tokio"] }
 zbus_macros = "5.7.1"
-rog_platform = { git = "https://gitlab.com/asus-linux/asusctl.git", default-features = true }
 xdg = "3.0.0"
 toml = "0.8.23"
 serde = { version = "1.0.219", features = ["derive"] }

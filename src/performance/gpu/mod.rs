@@ -1,9 +1,7 @@
-pub mod acpi;
-pub mod amd;
-pub mod asus;
 pub mod connector;
+pub mod database;
 pub mod dbus;
-pub mod intel;
-pub mod interface;
-pub mod platform;
+pub mod gpu_device;
+pub mod monitor;
+pub mod profile;
 pub mod tdp;
